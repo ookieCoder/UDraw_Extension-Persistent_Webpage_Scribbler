@@ -4,17 +4,9 @@
 
   const pageKey = `scribble:${location.origin}${location.pathname}`;
 
-  let strokes = [];
-  let currentStroke = null;
-  let drawing = false;
-  let drawEnabled = false;
-  let toolMode = "draw"; // draw | erase
-  let drawColor = "#ff0000";
-  let drawWidth = 2;
-  let toolbarVisible = true;
-  let undoStack = [];
-  let redoStack = [];
-  let erasingSessionActive = false;
+  let strokes = [], currentStroke = null, drawing = false, drawEnabled = false;
+  let toolMode = "draw", toolbarVisible = true, erasingSessionActive = false;
+  let drawColor = "#ff0000", drawWidth = 2, undoStack = [], redoStack = [];
 
   /* ---------------- Canvas ---------------- */
 
@@ -58,20 +50,11 @@
     chrome.storage.local.set({ [pageKey]: strokes });
   }
 
-  function strokeIntersects(stroke, pos, radius) {
-    return stroke.points.some(
-      p => Math.hypot(p.x - pos.x, p.y - pos.y) <= radius
-    );
-  }
-
   /* ---------------- Drawing ---------------- */
 
   canvas.addEventListener("mousedown", (e) => {
     if (!drawEnabled || toolMode !== "draw") return;
-
     drawing = true;
-
-    // UNDO SNAPSHOT HERE (ONLY ONCE)
     undoStack.push(JSON.parse(JSON.stringify(strokes)));
     redoStack.length = 0;
     updateUI();
@@ -91,7 +74,6 @@
 
   canvas.addEventListener("mousemove", (e) => {
     if (!drawEnabled) return;
-
     const p = docPos(e);
 
     // DRAW MODE
@@ -134,25 +116,6 @@
     erasingSessionActive = false;
   });
 
-  function eraseAt(pos, radius) {
-    let changed = false;
-
-    strokes = strokes
-      .map(stroke => {
-        const pts = stroke.points.filter(
-          p => Math.hypot(p.x - pos.x, p.y - pos.y) > radius
-        );
-        if (pts.length !== stroke.points.length) changed = true;
-        return pts.length > 1 ? { ...stroke, points: pts } : null;
-      })
-      .filter(Boolean);
-
-    if (changed) {
-      redrawAll();
-      save();
-    }
-  }
-
   function redrawAll() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     for (const s of strokes) {
@@ -166,30 +129,72 @@
     }
   }
 
-  /* ---------------- Toolbar ---------------- */
+  function strokeIntersects(stroke, pos, radius) {
+    return stroke.points.some(
+      p => Math.hypot(p.x - pos.x, p.y - pos.y) <= radius
+    );
+  }
 
+  /* ---------------- Toolbar ---------------- */
   const toolbar = document.createElement("div");
+  toolbar.id = "toolbar";
   Object.assign(toolbar.style, {
     position: "fixed",
-    top: "10px",
-    left: "10px",
+    top: "16px",
+    left: "16px",
     zIndex: "2147483647",
-    background: "#fff",
-    border: "1px solid #888",
-    padding: "8px",
-    fontFamily: "sans-serif"
+    backgroundColor: "#ffffff",
+    color: "#000000",
+    border: "2px solid #000000",
+    borderRadius: "8px",
+    padding: "12px",
+    fontFamily: "system-ui, sans-serif",
+    fontSize: "15px",
+    width: "220px",
   });
 
   toolbar.innerHTML = `
-    <button id="toggle">Start Drawing</button>
-    <button id="undo" disabled>Undo</button>
-    <button id="redo" disabled>Redo</button><br><br>
-    <input type="color" id="color" value="${drawColor}">
-    <input type="range" id="width" min="1" max="10" value="${drawWidth}">
-    <button id="eraser">Eraser</button>
-    <button id="clear">Clear</button>
-    <button id="export">Export</button>
+    <div style="display:flex; flex-direction:column; gap:10px">
+      <button id="toggle" class="primary">
+        ✏️ Start Drawing
+      </button>
+      <div class="row">
+        <button id="undo" disabled>↶ Undo</button>
+        <button id="redo" disabled>↷ Redo</button>
+      </div>
+      <hr>
+      <label class="label">
+        Color
+        <input type="color" id="color" value="${drawColor}">
+      </label>
+      <label class="label">
+        Stroke Width
+        <input type="range" id="width" min="1" max="12" value="${drawWidth}">
+      </label>
+      <div class="row">
+        <button id="eraser">🧽 Eraser</button>
+        <button id="clear">🗑 Clear</button>
+      </div>
+      <button id="export">📤 Export</button>
+    </div>
   `;
+
+  const style = document.createElement("style");
+  style.textContent = `
+    #toolbar,
+    #toolbar * {
+      background: #000000 !important;
+      color: #ffffff !important;
+      border-color: #ffffff !important;
+    }
+
+    #toolbar button,
+    #toolbar input {
+      border: 1px solid #ffffff !important;
+      padding: 4px !important;
+    }
+  `;
+  document.head.appendChild(style);
 
   document.body.appendChild(toolbar);
   const $ = id => toolbar.querySelector(id);
@@ -199,7 +204,7 @@
     toolMode = "draw";
     canvas.style.pointerEvents = drawEnabled ? "auto" : "none";
     canvas.style.cursor = "default";
-    $("#toggle").innerText = drawEnabled ? "Stop Drawing" : "Start Drawing";
+    $("#toggle").innerText = drawEnabled ? "Stop Drawing" : "✏️ Start Drawing";
   };
 
   $("#eraser").onclick = () => {
@@ -255,10 +260,8 @@
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === "TOGGLE_TOOLBAR") {
       toolbarVisible = !toolbarVisible;
-
       toolbar.style.display = toolbarVisible ? "block" : "none";
-
-      // Also disable drawing when hidden
+      // Disable drawing when hidden
       if (!toolbarVisible) {
         drawEnabled = false;
         toolMode = "draw";
