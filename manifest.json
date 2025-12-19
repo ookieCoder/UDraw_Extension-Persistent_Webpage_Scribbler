@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "UDraw - Persistent Webpage Scribbler",
+  "version": "1.0",
+  "description": "Scribble on webpages — Scribble persist per URL across visits.",
+  "permissions": ["storage"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Toggle Scribbler"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+  "icons": {
+    "48": "icon.png"
+  }
+}
