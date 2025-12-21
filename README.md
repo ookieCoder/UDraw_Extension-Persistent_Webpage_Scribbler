@@ -14,6 +14,13 @@ This extension injects drawing tools into web pages so users can sketch, and vis
 - Simple and minimal UI
 - Runs as an installable Chrome extension
 
+## Demo Video
+
+<video width="720" controls>
+  <source src="demo.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
 ## Installation
 
 1. **Clone the repository**
